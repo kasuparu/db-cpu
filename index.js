@@ -1,5 +1,7 @@
+'use strict';
+
 function InputStream(input) {
-    var pos = 0, line = 1, col = 0;
+    let pos = 0, line = 1, col = 0;
     return {
         next  : next,
         peek  : peek,
@@ -7,8 +9,11 @@ function InputStream(input) {
         croak : croak,
     };
     function next() {
-        var ch = input.charAt(pos++);
-        if (ch === '\n') line++, col = 0; else col++;
+        const ch = input.charAt(pos++);
+        if (ch === '\n') {
+            line++;
+            col = 0;
+        } else col++;
         return ch;
     }
     function peek() {
@@ -23,8 +28,8 @@ function InputStream(input) {
 }
 
 function TokenStream(input) {
-    var current = null;
-    var keywords = ' if then else lambda λ true false ';
+    let current = null;
+    const keywords = ' if then else lambda λ true false ';
     return {
         next  : next,
         peek  : peek,
@@ -53,14 +58,14 @@ function TokenStream(input) {
         return ' \t\n'.indexOf(ch) >= 0;
     }
     function read_while(predicate) {
-        var str = '';
+        let str = '';
         while (!input.eof() && predicate(input.peek()))
             str += input.next();
         return str;
     }
     function read_number() {
-        var has_dot = false;
-        var number = read_while(function(ch){
+        let has_dot = false;
+        const number = read_while(function(ch){
             if (ch === '.') {
                 if (has_dot) return false;
                 has_dot = true;
@@ -71,17 +76,17 @@ function TokenStream(input) {
         return { type: 'num', value: parseFloat(number) };
     }
     function read_ident() {
-        var id = read_while(is_id);
+        const id = read_while(is_id);
         return {
             type  : is_keyword(id) ? 'kw' : 'var',
             value : id
         };
     }
     function read_escaped(end) {
-        var escaped = false, str = '';
+        let escaped = false, str = '';
         input.next();
         while (!input.eof()) {
-            var ch = input.next();
+            const ch = input.next();
             if (escaped) {
                 str += ch;
                 escaped = false;
@@ -99,13 +104,13 @@ function TokenStream(input) {
         return { type: 'str', value: read_escaped('"') };
     }
     function skip_comment() {
-        read_while(function(ch){ return ch != '\n' });
+        read_while(function(ch){ return ch !== '\n' });
         input.next();
     }
     function read_next() {
         read_while(is_whitespace);
         if (input.eof()) return null;
-        var ch = input.peek();
+        const ch = input.peek();
         if (ch === '#') {
             skip_comment();
             return read_next();
@@ -127,7 +132,7 @@ function TokenStream(input) {
         return current || (current = read_next());
     }
     function next() {
-        var tok = current;
+        let tok = current;
         current = null;
         return tok || read_next();
     }
@@ -137,7 +142,7 @@ function TokenStream(input) {
 }
 
 function parse(input) {
-    var PRECEDENCE = {
+    const PRECEDENCE = {
         '=': 1,
         '||': 2,
         '&&': 3,
@@ -145,18 +150,18 @@ function parse(input) {
         '+': 10, '-': 10,
         '*': 20, '/': 20, '%': 20,
     };
-    var FALSE = { type: 'bool', value: false };
+    const FALSE = { type: 'bool', value: false };
     return parse_toplevel();
     function is_punc(ch) {
-        var tok = input.peek();
+        const tok = input.peek();
         return tok && tok.type === 'punc' && (!ch || tok.value === ch) && tok;
     }
     function is_kw(kw) {
-        var tok = input.peek();
+        const tok = input.peek();
         return tok && tok.type === 'kw' && (!kw || tok.value === kw) && tok;
     }
     function is_op(op) {
-        var tok = input.peek();
+        const tok = input.peek();
         return tok && tok.type === 'op' && (!op || tok.value === op) && tok;
     }
     function skip_punc(ch) {
@@ -175,9 +180,9 @@ function parse(input) {
         input.croak('Unexpected token: ' + JSON.stringify(input.peek()));
     }
     function maybe_binary(left, my_prec) {
-        var tok = is_op();
+        const tok = is_op();
         if (tok) {
-            var his_prec = PRECEDENCE[tok.value];
+            const his_prec = PRECEDENCE[tok.value];
             if (his_prec > my_prec) {
                 input.next();
                 return maybe_binary({
@@ -191,7 +196,8 @@ function parse(input) {
         return left;
     }
     function delimited(start, stop, separator, parser) {
-        var a = [], first = true;
+        const a = [];
+        let first = true;
         skip_punc(start);
         while (!input.eof()) {
             if (is_punc(stop)) break;
@@ -210,16 +216,16 @@ function parse(input) {
         };
     }
     function parse_varname() {
-        var name = input.next();
-        if (name.type != 'var') input.croak('Expecting variable name');
+        const name = input.next();
+        if (name.type !== 'var') input.croak('Expecting variable name');
         return name.value;
     }
     function parse_if() {
         skip_kw('if');
-        var cond = parse_expression();
+        const cond = parse_expression();
         if (!is_punc('{')) skip_kw('then');
-        var then = parse_expression();
-        var ret = {
+        const then = parse_expression();
+        const ret = {
             type: 'if',
             cond: cond,
             then: then,
@@ -251,7 +257,7 @@ function parse(input) {
         return maybe_call(function(){
             if (is_punc('(')) {
                 input.next();
-                var exp = parse_expression();
+                const exp = parse_expression();
                 skip_punc(')');
                 return exp;
             }
@@ -262,14 +268,14 @@ function parse(input) {
                 input.next();
                 return parse_lambda();
             }
-            var tok = input.next();
+            const tok = input.next();
             if (tok.type === 'var' || tok.type === 'num' || tok.type === 'str')
                 return tok;
             unexpected();
         });
     }
     function parse_toplevel() {
-        var prog = [];
+        const prog = [];
         while (!input.eof()) {
             prog.push(parse_expression());
             if (!input.eof()) skip_punc(';');
@@ -277,7 +283,7 @@ function parse(input) {
         return { type: 'prog', prog: prog };
     }
     function parse_prog() {
-        var prog = delimited('{', '}', ';', parse_expression);
+        const prog = delimited('{', '}', ';', parse_expression);
         if (prog.length === 0) return FALSE;
         if (prog.length === 1) return prog[0];
         return { type: 'prog', prog: prog };
@@ -298,7 +304,7 @@ Environment.prototype = {
         return new Environment(this);
     },
     lookup: function(name) {
-        var scope = this;
+        let scope = this;
         while (scope) {
             if (Object.prototype.hasOwnProperty.call(scope.vars, name))
                 return scope;
@@ -311,7 +317,7 @@ Environment.prototype = {
         throw new Error('Undefined variable ' + name);
     },
     set: function(name, value) {
-        var scope = this.lookup(name);
+        const scope = this.lookup(name);
         if (!scope && this.parent)
             throw new Error('Undefined variable ' + name);
         return (scope || this).vars[name] = value;
@@ -332,7 +338,7 @@ function evaluate(exp, env) {
         return env.get(exp.value);
 
       case 'assign':
-        if (exp.left.type != 'var')
+        if (exp.left.type !== 'var')
             throw new Error('Cannot assign to ' + JSON.stringify(exp.left));
         return env.set(exp.left.value, evaluate(exp.right, env));
 
@@ -345,17 +351,17 @@ function evaluate(exp, env) {
         return make_lambda(env, exp);
 
       case 'if':
-        var cond = evaluate(exp.cond, env);
+        const cond = evaluate(exp.cond, env);
         if (cond !== false) return evaluate(exp.then, env);
         return exp.else ? evaluate(exp.else, env) : false;
 
       case 'prog':
-        var val = false;
+        let val = false;
         exp.prog.forEach(function(exp){ val = evaluate(exp, env) });
         return val;
 
       case 'call':
-        var func = evaluate(exp.func, env);
+        const func = evaluate(exp.func, env);
         return func.apply(null, exp.args.map(function(arg){
             return evaluate(arg, env);
         }));
@@ -367,7 +373,7 @@ function evaluate(exp, env) {
 
 function apply_op(op, a, b) {
     function num(x) {
-        if (typeof x != 'number')
+        if (typeof x !== 'number')
             throw new Error('Expected number but got ' + x);
         return x;
     }
@@ -396,9 +402,9 @@ function apply_op(op, a, b) {
 
 function make_lambda(env, exp) {
     function lambda() {
-        var names = exp.vars;
-        var scope = env.extend();
-        for (var i = 0; i < names.length; ++i)
+        const names = exp.vars;
+        const scope = env.extend();
+        for (let i = 0; i < names.length; ++i)
             scope.def(names[i], i < arguments.length ? arguments[i] : false);
         return evaluate(exp.body, scope);
     }
@@ -407,7 +413,7 @@ function make_lambda(env, exp) {
 
 /* -----[ entry point for NodeJS ]----- */
 
-var globalEnv = new Environment();
+const globalEnv = new Environment();
 
 globalEnv.def('time', function(func){
     try {
@@ -418,22 +424,22 @@ globalEnv.def('time', function(func){
     }
 });
 
-if (typeof process != 'undefined') (function(){
-    var util = require('util');
+if (typeof process !== 'undefined') (function(){
+    const util = require('util');
     globalEnv.def('println', function(val){
-        util.puts(val);
+        console.log(val);
     });
     globalEnv.def('print', function(val){
         util.print(val);
     });
-    var code = '';
+    let code = '';
     process.stdin.setEncoding('utf8');
     process.stdin.on('readable', function(){
-        var chunk = process.stdin.read();
+        const chunk = process.stdin.read();
         if (chunk) code += chunk;
     });
     process.stdin.on('end', function(){
-        var ast = parse(TokenStream(InputStream(code)));
+        const ast = parse(TokenStream(InputStream(code)));
         evaluate(ast, globalEnv);
     });
 })();
