@@ -32,7 +32,7 @@ function InputStream(input) {
 
 function TokenStream(input) {
     let current = null;
-    const keywords = ' if then else lambda λ true false ';
+    const keywords = ' if then else function λ true false ';
     return {
         next: next,
         peek: peek,
@@ -269,11 +269,16 @@ function parse(input) {
         return ret;
     }
 
-    function parse_lambda() {
+    function parse_function() {
         return {
-            type: 'lambda',
-            vars: delimited('(', ')', ',', parse_varname),
-            body: parse_expression()
+            type: 'assign',
+            operator: '=',
+            left: input.next(),
+            right: {
+                type: 'function',
+                vars: delimited('(', ')', ',', parse_varname),
+                body: parse_expression()
+            }
         };
     }
 
@@ -300,9 +305,9 @@ function parse(input) {
             if (is_punc('{')) return parse_prog();
             if (is_kw('if')) return parse_if();
             if (is_kw('true') || is_kw('false')) return parse_bool();
-            if (is_kw('lambda') || is_kw('λ')) {
+            if (is_kw('function')) {
                 input.next();
-                return parse_lambda();
+                return parse_function();
             }
             const tok = input.next();
             if (tok.type === 'var' || tok.type === 'num' || tok.type === 'str')
@@ -386,8 +391,8 @@ function evaluate(exp, env) {
                 evaluate(exp.left, env),
                 evaluate(exp.right, env));
 
-        case 'lambda':
-            return make_lambda(env, exp);
+        case 'function':
+            return make_function(env, exp);
 
         case 'if':
             const cond = evaluate(exp.cond, env);
@@ -456,7 +461,7 @@ function apply_op(op, a, b) {
     throw new Error('Can\'t apply operator ' + op);
 }
 
-function make_lambda(env, exp) {
+function make_function(env, exp) {
     function lambda() {
         const names = exp.vars;
         const scope = env.extend();
