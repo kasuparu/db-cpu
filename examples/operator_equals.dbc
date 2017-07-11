@@ -1,0 +1,17 @@
+foo = 2;
+bar = 3;
+zero(foo);
+inc(foo, bar);
+println(foo, bar);
+println(bar);
+
+
+foo = 2;
+bar = 3;
+function operator_equals(foo, bar) {
+    zero(foo);
+    inc(foo, bar);
+};
+operator_equals(foo, bar);
+println(foo, bar);
+println(bar);

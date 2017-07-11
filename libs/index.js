@@ -32,7 +32,7 @@ function InputStream(input) {
 
 function TokenStream(input) {
     let current = null;
-    const keywords = ' if then else function λ true false ';
+    const keywords = ' if then else function λ true false zero inc ';
     return {
         next: next,
         peek: peek,
@@ -282,6 +282,20 @@ function parse(input) {
         };
     }
 
+    function parse_zero() {
+        return {
+            type: 'zero',
+            vars: delimited('(', ')', ',', parse_varname)
+        };
+    }
+
+    function parse_inc() {
+        return {
+            type: 'inc',
+            vars: delimited('(', ')', ',', parse_varname)
+        };
+    }
+
     function parse_bool() {
         return {
             type: 'bool',
@@ -308,6 +322,14 @@ function parse(input) {
             if (is_kw('function')) {
                 input.next();
                 return parse_function();
+            }
+            if (is_kw('zero')) {
+                input.next();
+                return parse_zero();
+            }
+            if (is_kw('inc')) {
+                input.next();
+                return parse_inc();
             }
             const tok = input.next();
             if (tok.type === 'var' || tok.type === 'num' || tok.type === 'str')
@@ -385,6 +407,16 @@ function evaluate(exp, env) {
             if (exp.left.type !== 'var')
                 throw new Error('Cannot assign to ' + JSON.stringify(exp.left));
             return env.set(exp.left.value, evaluate(exp.right, env));
+
+        case 'zero':
+            for (let i = 0; i < exp.vars.length; ++i)
+                env.set(exp.vars[i], 0);
+            return 0;
+
+        case 'inc':
+            for (let i = 0; i < exp.vars.length; ++i)
+                env.set(exp.vars[i], env.get(exp.vars[i]) + 1);
+            return env.get(exp.vars[exp.vars.length - 1]);
 
         case 'binary':
             return apply_op(exp.operator,
