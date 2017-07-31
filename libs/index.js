@@ -32,7 +32,7 @@ function InputStream(input) {
 
 function TokenStream(input) {
     let current = null;
-    const keywords = ' if then else function λ true false zero inc ';
+    const keywords = ' if then else function λ true false zero inc loop ';
     return {
         next: next,
         peek: peek,
@@ -296,6 +296,17 @@ function parse(input) {
         };
     }
 
+    function parse_loop() {
+        skip_kw('loop');
+        const max = parse_expression();
+        const body = parse_expression();
+        return {
+            type: 'loop',
+            max: max,
+            body: body
+        };
+    }
+
     function parse_bool() {
         return {
             type: 'bool',
@@ -330,6 +341,9 @@ function parse(input) {
             if (is_kw('inc')) {
                 input.next();
                 return parse_inc();
+            }
+            if (is_kw('loop')) {
+                return parse_loop();
             }
             const tok = input.next();
             if (tok.type === 'var' || tok.type === 'num' || tok.type === 'str')
@@ -406,6 +420,7 @@ Environment.prototype = {
 };
 
 function evaluate(exp, env) {
+    let result = false;
     switch (exp.type) {
         case 'num':
         case 'str':
@@ -426,7 +441,6 @@ function evaluate(exp, env) {
             return 0;
 
         case 'inc':
-            let result = false;
             for (let i = 0; i < exp.vars.length; ++i)
                 result = env.set(exp.vars[i], env.get(exp.vars[i]) + 1);
             return result;
@@ -443,6 +457,14 @@ function evaluate(exp, env) {
             const cond = evaluate(exp.cond, env);
             if (cond !== false) return evaluate(exp.then, env);
             return exp.else ? evaluate(exp.else, env) : false;
+
+        case 'loop':
+            const max = evaluate(exp.max, env);
+            if ('number' !== typeof max)
+                throw new Error('Cannot loop to ' + JSON.stringify(exp.max));
+            for (let i = 0; i < max; ++i)
+                result = evaluate(exp.body, env);
+            return result;
 
         case 'prog':
             let val = false;

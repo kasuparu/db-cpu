@@ -16,3 +16,7 @@ function operator_equals(a, b) {
 operator_equals(foo, bar);
 println(foo);
 println(bar);
+
+loop (bar) {
+    inc(foo);
+}
