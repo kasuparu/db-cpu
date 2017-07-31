@@ -8,10 +8,10 @@ println(bar);
 
 foo = 2;
 bar = 3;
-function operator_equals(foo, bar) {
-    zero(foo);
-    inc(foo, bar);
+function operator_equals(a, b) {
+    zero(a);
+    inc(a, b);
 };
 operator_equals(foo, bar);
-println(foo, bar);
+println(foo);
 println(bar);

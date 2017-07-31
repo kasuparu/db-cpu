@@ -362,8 +362,10 @@ function parse(input) {
 }
 
 function Environment(parent) {
+    this.id = globalEnvId++;
     this.vars = Object.create(parent ? parent.vars : null);
     this.parent = parent;
+    console.log(`created env${this.id} ${JSON.stringify(this)}`);
 }
 Environment.prototype = {
     extend: function () {
@@ -378,6 +380,7 @@ Environment.prototype = {
         }
     },
     get: function (name) {
+        console.log(`env${this.id} get `, name, 'function' !== typeof this.vars[name] ? this.vars[name] : 'function');
         if (name in this.vars)
             return this.vars[name];
         throw new Error('Undefined variable ' + name);
@@ -386,6 +389,7 @@ Environment.prototype = {
         const scope = this.lookup(name);
         if (!scope && this.parent)
             throw new Error('Undefined variable ' + name);
+        console.log(`env${this.id} set `, name, 'function' !== typeof value ? value : 'function');
         return (scope || this).vars[name] = value;
     },
     def: function (name, value) {
@@ -414,9 +418,10 @@ function evaluate(exp, env) {
             return 0;
 
         case 'inc':
+            let result = false;
             for (let i = 0; i < exp.vars.length; ++i)
-                env.set(exp.vars[i], env.get(exp.vars[i]) + 1);
-            return env.get(exp.vars[exp.vars.length - 1]);
+                result = env.set(exp.vars[i], env.get(exp.vars[i]) + 1);
+            return result;
 
         case 'binary':
             return apply_op(exp.operator,
@@ -506,7 +511,7 @@ function make_function(env, exp) {
 }
 
 /* -----[ entry point for NodeJS ]----- */
-
+let globalEnvId = 0;
 const globalEnv = new Environment();
 
 globalEnv.def('time', function (func) {
