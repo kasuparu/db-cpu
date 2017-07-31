@@ -11,6 +11,7 @@ bar = 3;
 function operator_equals(a, b) {
     zero(a);
     inc(a, b);
+    println(bar);
 };
 operator_equals(foo, bar);
 println(foo);

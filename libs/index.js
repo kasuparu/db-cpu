@@ -363,7 +363,7 @@ function parse(input) {
 
 function Environment(parent) {
     this.id = globalEnvId++;
-    this.vars = Object.create(parent ? parent.vars : null);
+    this.vars = Object.create(null);
     this.parent = parent;
     console.log(`created env${this.id} ${JSON.stringify(this)}`);
 }
@@ -380,9 +380,16 @@ Environment.prototype = {
         }
     },
     get: function (name) {
-        console.log(`env${this.id} get `, name, 'function' !== typeof this.vars[name] ? this.vars[name] : 'function');
-        if (name in this.vars)
-            return this.vars[name];
+        const scope = this.lookup(name);
+        if (scope && name in scope.vars) {
+            console.log(
+                `env${this.id} get `,
+                name,
+                'function' !== typeof scope.vars[name] ? scope.vars[name] : 'function',
+                `found in env${scope.id}`
+            );
+            return scope.vars[name];
+        }
         throw new Error('Undefined variable ' + name);
     },
     set: function (name, value) {
@@ -393,6 +400,7 @@ Environment.prototype = {
         return (scope || this).vars[name] = value;
     },
     def: function (name, value) {
+        console.log(`env${this.id} def `, name, 'function' !== typeof value ? value : 'function');
         return this.vars[name] = value;
     }
 };
@@ -504,6 +512,7 @@ function make_function(env, exp) {
         const scope = env.extend();
         for (let i = 0; i < names.length; ++i)
             scope.def(names[i], i < arguments.length ? arguments[i] : false);
+        console.log(`lambda scope ${JSON.stringify(scope)}`);
         return evaluate(exp.body, scope);
     }
 
